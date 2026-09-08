@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Stage {
+  APPLICATION
+  EVALUATION
+  PLAN
+  REPORT
+  DONE
+}
+
+enum StageStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum OverallStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ReportProgress {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  createdChangeControls ChangeControl[] @relation("CCCreatedBy")
+
+  submittedApplications Application[] @relation("AppSubmittedBy")
+  reviewedApplications  Application[] @relation("AppReviewedBy")
+
+  submittedEvaluations Evaluation[] @relation("EvalSubmittedBy")
+  reviewedEvaluations  Evaluation[] @relation("EvalReviewedBy")
+
+  submittedPlans Plan[] @relation("PlanSubmittedBy")
+  reviewedPlans  Plan[] @relation("PlanReviewedBy")
+
+  submittedReports Report[] @relation("ReportSubmittedBy")
+  reviewedReports  Report[] @relation("ReportReviewedBy")
+
+  activityLogs ActivityLog[]
+}
+
+model ChangeControl {
+  id            String        @id @default(cuid())
+  ccNumber      String        @unique
+  title         String
+  productName   String
+  currentStage  Stage         @default(APPLICATION)
+  overallStatus OverallStatus @default(IN_PROGRESS)
+
+  createdById String
+  createdBy   User   @relation("CCCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application?
+  evaluation  Evaluation?
+  plan        Plan?
+  report      Report?
+  activities  ActivityLog[]
+}
+
+model Application {
+  id              String @id @default(cuid())
+  changeControlId String @unique
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+
+  currentState  String @db.Text // 현행 (Current)
+  changeAgenda  String @db.Text // 변경 안 (Change agenda)
+  reason        String @db.Text // 변경 사유 (Reason for change)
+  hasAttachment Boolean @default(false)
+
+  status       StageStatus @default(SUBMITTED)
+  rejectReason String?     @db.Text
+
+  submittedById String
+  submittedBy   User     @relation("AppSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt   DateTime @default(now())
+
+  reviewedById String?
+  reviewedBy   User?     @relation("AppReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+}
+
+model Evaluation {
+  id              String @id @default(cuid())
+  changeControlId String @unique
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+
+  dept1Name     String?
+  dept1Opinion  String? @db.Text
+  dept2Name     String?
+  dept2Opinion  String? @db.Text
+  dept3Name     String?
+  dept3Opinion  String? @db.Text
+
+  finalEvaluation   String  @db.Text // 최종 평가
+  needsConsultation Boolean @default(false) // 관련 업체 협의 필요 여부
+  needsCooperation  Boolean @default(false) // 업무협조 필요 여부
+  hasAttachment     Boolean @default(false)
+
+  status       StageStatus @default(SUBMITTED)
+  rejectReason String?     @db.Text
+
+  submittedById String
+  submittedBy   User     @relation("EvalSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt   DateTime @default(now())
+
+  reviewedById String?
+  reviewedBy   User?     @relation("EvalReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+}
+
+model Plan {
+  id              String @id @default(cuid())
+  changeControlId String @unique
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+
+  plannedCompletionDate DateTime
+  planDetails           String   @db.Text
+  hasAttachment         Boolean  @default(false)
+
+  status       StageStatus @default(SUBMITTED)
+  rejectReason String?     @db.Text
+
+  submittedById String
+  submittedBy   User     @relation("PlanSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt   DateTime @default(now())
+
+  reviewedById String?
+  reviewedBy   User?     @relation("PlanReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+}
+
+model Report {
+  id              String @id @default(cuid())
+  changeControlId String @unique
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+
+  progress            ReportProgress @default(IN_PROGRESS)
+  completedDate       DateTime?
+  resultDetails       String         @db.Text
+  relatedDocRevision  String         @db.Text
+  conclusion          String         @db.Text
+  hasAttachment       Boolean        @default(false)
+
+  status       StageStatus @default(SUBMITTED)
+  rejectReason String?     @db.Text
+
+  submittedById String
+  submittedBy   User     @relation("ReportSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt   DateTime @default(now())
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ReportReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+}
+
+model ActivityLog {
+  id              String        @id @default(cuid())
+  changeControlId String
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+
+  action String
+  note   String? @db.Text
+
+  byUserId String
+  byUser   User   @relation(fields: [byUserId], references: [id])
+
+  createdAt DateTime @default(now())
+}
