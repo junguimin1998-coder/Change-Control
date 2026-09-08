@@ -23,7 +23,13 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (res?.error) {
-      setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      if (res.error === "PENDING_APPROVAL") {
+        setError("관리자 승인 대기 중인 계정입니다. 승인 후 로그인할 수 있습니다.");
+      } else if (res.error === "ACCOUNT_REJECTED") {
+        setError("가입이 거절된 계정입니다. 관리자에게 문의하세요.");
+      } else {
+        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      }
       return;
     }
     router.push("/");

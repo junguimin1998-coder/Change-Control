@@ -26,6 +26,13 @@ export const authOptions: AuthOptions = {
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;
 
+        if (user.accountStatus === "PENDING") {
+          throw new Error("PENDING_APPROVAL");
+        }
+        if (user.accountStatus === "REJECTED") {
+          throw new Error("ACCOUNT_REJECTED");
+        }
+
         return {
           id: user.id,
           email: user.email,

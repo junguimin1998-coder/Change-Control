@@ -12,6 +12,12 @@ enum Role {
   USER
 }
 
+enum AccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum Stage {
   APPLICATION
   EVALUATION
@@ -37,12 +43,18 @@ enum ReportProgress {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
+  id            String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  name          String
+  role          Role          @default(USER)
+  accountStatus AccountStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+
+  approvedById String?
+  approvedBy   User?   @relation("UserApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+  approvedUsers User[] @relation("UserApprovedBy")
 
   createdChangeControls ChangeControl[] @relation("CCCreatedBy")
 

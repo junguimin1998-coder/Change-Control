@@ -29,15 +29,19 @@ export async function signup(formData: FormData) {
     .filter(Boolean);
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const isAdminEmail = adminEmails.includes(email);
 
   await prisma.user.create({
     data: {
       name,
       email,
       passwordHash,
-      role: adminEmails.includes(email) ? "ADMIN" : "USER",
+      role: isAdminEmail ? "ADMIN" : "USER",
+      // ADMIN_EMAILS로 지정된 이메일은 승인 절차 없이 즉시 사용 가능해야
+      // 최초 관리자 계정을 만들 수 있습니다(그 외 계정은 관리자 승인 필요).
+      accountStatus: isAdminEmail ? "APPROVED" : "PENDING",
     },
   });
 
-  redirect("/login");
+  redirect(`/signup/pending?status=${isAdminEmail ? "approved" : "pending"}`);
 }
