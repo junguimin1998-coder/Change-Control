@@ -23,25 +23,22 @@ export async function signup(formData: FormData) {
     redirect("/signup?error=" + encodeURIComponent("이미 가입된 이메일입니다."));
   }
 
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
   const passwordHash = await bcrypt.hash(password, 10);
-  const isAdminEmail = adminEmails.includes(email);
+
+  // 가장 처음 가입하는 사람이 없으면(회원 0명) 곧바로 관리자로 승인합니다.
+  // 그 외에는 일단 대기 상태로 가입되고, 관리자가 승인하면서 권한(관리자/A/B/C)을 정해줍니다.
+  const userCount = await prisma.user.count();
+  const isFirstUser = userCount === 0;
 
   await prisma.user.create({
     data: {
       name,
       email,
       passwordHash,
-      role: isAdminEmail ? "ADMIN" : "USER",
-      // ADMIN_EMAILS로 지정된 이메일은 승인 절차 없이 즉시 사용 가능해야
-      // 최초 관리자 계정을 만들 수 있습니다(그 외 계정은 관리자 승인 필요).
-      accountStatus: isAdminEmail ? "APPROVED" : "PENDING",
+      role: isFirstUser ? "ADMIN" : "C",
+      accountStatus: isFirstUser ? "APPROVED" : "PENDING",
     },
   });
 
-  redirect(`/signup/pending?status=${isAdminEmail ? "approved" : "pending"}`);
+  redirect(`/signup/pending?status=${isFirstUser ? "approved" : "pending"}`);
 }

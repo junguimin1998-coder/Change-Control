@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ROLE_LABEL } from "@/lib/roles";
 import SignOutButton from "@/components/SignOutButton";
 
 export default async function TopNav() {
@@ -27,7 +28,7 @@ export default async function TopNav() {
             </Link>
           )}
           <span>
-            {session.user.name} ({isAdmin ? "관리자" : "일반 사용자"})
+            {session.user.name} ({ROLE_LABEL[session.user.role]})
           </span>
           <SignOutButton />
         </div>
