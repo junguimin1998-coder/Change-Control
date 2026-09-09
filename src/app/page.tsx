@@ -95,12 +95,12 @@ function toRow(cc: CC, activeStageRecord: { status: "SUBMITTED" | "APPROVED" | "
     ccNumber: cc.ccNumber,
     title: cc.title,
     productName: cc.productName,
-    year: new Date(cc.deadline).getFullYear(),
+    year: (cc.deadline ?? cc.createdAt).getFullYear(),
     stageLabel: STAGE_LABEL[cc.currentStage],
     statusText: status.text,
     statusColor: status.color,
     submitter: cc.createdBy.name,
-    deadline: cc.deadline.toISOString(),
+    deadline: cc.deadline ? cc.deadline.toISOString() : null,
     updatedAt: cc.updatedAt.toISOString(),
     overallStatus: cc.overallStatus,
   };
@@ -133,7 +133,13 @@ function OverviewTab({
     if (cc.currentStage in stageCounts) stageCounts[cc.currentStage]++;
   }
 
-  const summaryRows = [...inProgress].sort((a, b) => daysUntilKST(a.deadline) - daysUntilKST(b.deadline));
+  const summaryRows = [...inProgress].sort((a, b) => {
+    const da = daysUntilKST(a.deadline);
+    const db = daysUntilKST(b.deadline);
+    if (da === null) return db === null ? 0 : 1;
+    if (db === null) return -1;
+    return da - db;
+  });
 
   return (
     <div>

@@ -1,4 +1,7 @@
-export function deadlineBadge(daysLeft: number) {
+export function deadlineBadge(daysLeft: number | null) {
+  if (daysLeft === null) {
+    return { text: "마감 미설정", color: "bg-slate-100 text-slate-500 border-slate-300" };
+  }
   if (daysLeft < 0) {
     return { text: `마감 ${Math.abs(daysLeft)}일 초과`, color: "bg-rose-100 text-rose-700 border-rose-300" };
   }

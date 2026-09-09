@@ -80,7 +80,7 @@ model ChangeControl {
   ccNumber      String        @unique
   title         String
   productName   String
-  deadline      DateTime
+  deadline      DateTime?
   currentStage  Stage         @default(APPLICATION)
   overallStatus OverallStatus @default(IN_PROGRESS)
 

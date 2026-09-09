@@ -21,8 +21,9 @@ export function kstDateStamp(d: Date = new Date()): string {
   return `${yy}${mm}${dd}`;
 }
 
-// target 날짜가 KST 기준 오늘로부터 며칠 후인지 (음수면 이미 지남)
-export function daysUntilKST(target: Date): number {
+// target 날짜가 KST 기준 오늘로부터 며칠 후인지 (음수면 이미 지남). target이 없으면 null.
+export function daysUntilKST(target: Date | null | undefined): number | null {
+  if (!target) return null;
   const today = kstDateParts(new Date());
   const t = kstDateParts(target);
   const todayUTC = Date.UTC(today.year, today.month - 1, today.day);

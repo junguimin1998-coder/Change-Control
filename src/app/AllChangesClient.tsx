@@ -15,7 +15,7 @@ type Row = {
   statusText: string;
   statusColor: string;
   submitter: string;
-  deadline: string;
+  deadline: string | null;
   updatedAt: string;
   overallStatus: "IN_PROGRESS" | "COMPLETED";
 };
@@ -130,7 +130,7 @@ export default function AllChangesClient({ rows }: { rows: Row[] }) {
             </thead>
             <tbody>
               {sorted.map((r) => {
-                const badge = deadlineBadge(daysUntilKST(new Date(r.deadline)));
+                const badge = deadlineBadge(daysUntilKST(r.deadline ? new Date(r.deadline) : null));
                 return (
                   <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-4 py-3">
