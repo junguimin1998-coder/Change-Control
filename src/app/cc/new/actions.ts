@@ -18,7 +18,8 @@ export async function createApplication(formData: FormData) {
   const currentState = String(formData.get("currentState") ?? "").trim();
   const changeAgenda = String(formData.get("changeAgenda") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
-  const hasAttachment = formData.get("hasAttachment") === "yes";
+  const files = formData.getAll("attachments").filter((f): f is File => f instanceof File && f.size > 0);
+  const hasAttachment = formData.get("hasAttachment") === "yes" || files.length > 0;
 
   if (!title || productNames.length === 0 || !deadlineRaw || !currentState || !changeAgenda || !reason) {
     redirect(
@@ -57,5 +58,20 @@ export async function createApplication(formData: FormData) {
     },
   });
 
-  redirect(`/cc/${cc.id}`);
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await prisma.attachment.create({
+      data: {
+        changeControlId: cc.id,
+        stage: "APPLICATION",
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: buffer.byteLength,
+        data: buffer,
+        uploadedById: session!.user.id,
+      },
+    });
+  }
+
+  redirect(`/cc/${cc.id}/application`);
 }

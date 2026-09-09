@@ -10,6 +10,7 @@ type Row = {
   title: string;
   productNames: string[];
   year: number;
+  currentStage: "APPLICATION" | "EVALUATION" | "PLAN" | "REPORT" | "DONE";
   submittedAt: string;
   evaluationDate: string | null;
   planDate: string | null;
@@ -24,6 +25,15 @@ type SortKey = "year" | "title" | "submittedAt" | "evaluationDate" | "planDate" 
 function fmtDate(iso: string | null) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString("ko-KR");
+}
+
+// 이 대장에서는 4단계로만 단순화해서 보여줍니다: 접수/평가/계획 진행 중이거나, 완료보고서
+// 단계에 들어갔거나 이미 완료됐으면 "완료"로 묶습니다.
+function stageLabel4(stage: Row["currentStage"]) {
+  if (stage === "APPLICATION") return "접수";
+  if (stage === "EVALUATION") return "평가";
+  if (stage === "PLAN") return "계획";
+  return "완료";
 }
 
 // 연속으로 같은 값이 나오는 구간을 하나로 묶기 위한 rowSpan 계산 (정렬/필터 결과가 바뀌면
@@ -142,29 +152,29 @@ export default function Ledger({ rows, isAdmin }: { rows: Row[]; isAdmin: boolea
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("year")}>
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("year")}>
                   연도{sortArrow("year")}
                 </th>
-                <th className="px-3 py-3">No.</th>
+                <th className="whitespace-nowrap px-3 py-3">No.</th>
                 <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("title")}>
                   변경내용{sortArrow("title")}
                 </th>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("submittedAt")}>
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("submittedAt")}>
                   변경접수일{sortArrow("submittedAt")}
                 </th>
-                <th className="px-3 py-3">변경관리 문서번호</th>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("evaluationDate")}>
+                <th className="whitespace-nowrap px-3 py-3">변경관리 문서번호</th>
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("evaluationDate")}>
                   변경평가{sortArrow("evaluationDate")}
                 </th>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("planDate")}>
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("planDate")}>
                   변경계획{sortArrow("planDate")}
                 </th>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("completedDate")}>
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("completedDate")}>
                   변경완료일{sortArrow("completedDate")}
                 </th>
                 <th className="px-3 py-3">비고</th>
-                <th className="cursor-pointer select-none px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("isCompleted")}>
-                  완료 여부{sortArrow("isCompleted")}
+                <th className="cursor-pointer select-none whitespace-nowrap px-3 py-3 hover:text-slate-800" onClick={() => toggleSort("isCompleted")}>
+                  단계{sortArrow("isCompleted")}
                 </th>
               </tr>
             </thead>
@@ -172,55 +182,61 @@ export default function Ledger({ rows, isAdmin }: { rows: Row[]; isAdmin: boolea
               {withNo.map((r, i) => (
                 <tr key={r.id} className="border-t border-slate-100 align-top hover:bg-slate-50">
                   {yearSpans[i] > 0 && (
-                    <td rowSpan={yearSpans[i]} className="px-3 py-3 font-semibold text-slate-700">
+                    <td rowSpan={yearSpans[i]} className="whitespace-nowrap px-3 py-3 font-semibold text-slate-700">
                       {r.year}
                     </td>
                   )}
-                  <td className="px-3 py-3 text-slate-500">{r.no}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-slate-500">{r.no}</td>
                   <td className="px-3 py-3">
                     <Link href={`/cc/${r.id}`} className="font-medium text-brand-600 hover:underline">
                       {r.title}
                     </Link>
                   </td>
-                  <td className="px-3 py-3">
-                    <Link href={`/cc/${r.id}#application`} className="text-slate-700 hover:underline">
-                      {fmtDate(r.submittedAt)}
+                  <td className="whitespace-nowrap px-3 py-3 text-slate-700">{fmtDate(r.submittedAt)}</td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <Link href={`/cc/${r.id}`} className="text-brand-600 hover:underline">
+                      {r.ccNumber}
                     </Link>
                   </td>
-                  <td className="px-3 py-3 text-slate-500">{r.ccNumber}</td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     {r.evaluationDate ? (
-                      <Link href={`/cc/${r.id}#evaluation`} className="text-slate-700 hover:underline">
+                      <Link href={`/cc/${r.id}/evaluation`} className="text-slate-700 hover:underline">
                         {fmtDate(r.evaluationDate)}
                       </Link>
                     ) : (
                       <span className="text-slate-300">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     {r.planDate ? (
-                      <Link href={`/cc/${r.id}#plan`} className="text-slate-700 hover:underline">
+                      <Link href={`/cc/${r.id}/plan`} className="text-slate-700 hover:underline">
                         {fmtDate(r.planDate)}
                       </Link>
                     ) : (
                       <span className="text-slate-300">-</span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     {r.completedDate ? (
-                      <Link href={`/cc/${r.id}#report`} className="text-slate-700 hover:underline">
+                      <Link href={`/cc/${r.id}/report`} className="text-slate-700 hover:underline">
                         {fmtDate(r.completedDate)}
                       </Link>
                     ) : (
                       <span className="text-slate-300">-</span>
                     )}
                   </td>
-                  <td className="min-w-[160px] px-3 py-3">
+                  <td className="min-w-[180px] px-3 py-2">
                     {isAdmin ? (
-                      <form action={updateRemarks} className="flex gap-1">
+                      <form action={updateRemarks} className="flex flex-nowrap items-start gap-1">
                         <input type="hidden" name="ccId" value={r.id} />
-                        <input name="remarks" defaultValue={r.remarks} className="input py-1 text-xs" placeholder="-" />
-                        <button type="submit" className="btn-secondary px-2 py-1 text-xs">
+                        <textarea
+                          name="remarks"
+                          defaultValue={r.remarks}
+                          rows={1}
+                          className="input max-h-12 min-h-[2.25rem] flex-1 resize-none overflow-y-auto py-1.5 text-xs leading-snug"
+                          placeholder="-"
+                        />
+                        <button type="submit" className="btn-secondary shrink-0 whitespace-nowrap px-2 py-1.5 text-xs">
                           저장
                         </button>
                       </form>
@@ -228,7 +244,7 @@ export default function Ledger({ rows, isAdmin }: { rows: Row[]; isAdmin: boolea
                       <span className="text-slate-600">{r.remarks || "-"}</span>
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-3">
                     <span
                       className={`rounded-full border px-2 py-1 text-xs font-medium ${
                         r.isCompleted
@@ -236,7 +252,7 @@ export default function Ledger({ rows, isAdmin }: { rows: Row[]; isAdmin: boolea
                           : "border-amber-300 bg-amber-100 text-amber-700"
                       }`}
                     >
-                      {r.isCompleted ? "완료" : "진행중"}
+                      {stageLabel4(r.currentStage)}
                     </span>
                   </td>
                 </tr>

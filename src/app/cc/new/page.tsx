@@ -72,6 +72,11 @@ export default async function NewChangeControlPage({
           </div>
         </div>
 
+        <div>
+          <label className="label">파일 첨부 (선택)</label>
+          <input type="file" name="attachments" multiple className="input" />
+        </div>
+
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">

@@ -59,6 +59,7 @@ model User {
   approvedUsers User[] @relation("UserApprovedBy")
 
   createdChangeControls ChangeControl[] @relation("CCCreatedBy")
+  attachments           Attachment[]
 
   submittedApplications Application[] @relation("AppSubmittedBy")
   reviewedApplications  Application[] @relation("AppReviewedBy")
@@ -96,6 +97,23 @@ model ChangeControl {
   plan        Plan?
   report      Report?
   activities  ActivityLog[]
+  attachments Attachment[]
+}
+
+model Attachment {
+  id              String        @id @default(cuid())
+  changeControlId String
+  changeControl   ChangeControl @relation(fields: [changeControlId], references: [id])
+  stage           Stage
+
+  fileName String
+  mimeType String
+  size     Int
+  data     Bytes
+
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
 }
 
 model Application {

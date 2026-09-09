@@ -27,6 +27,27 @@ function assertOwnerOrAdmin(user: { id: string; role: string }, cc: { createdByI
   }
 }
 
+async function saveAttachments(formData: FormData, ccId: string, stage: "APPLICATION" | "EVALUATION" | "PLAN" | "REPORT", uploadedById: string) {
+  const files = formData.getAll("attachments").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return false;
+
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await prisma.attachment.create({
+      data: {
+        changeControlId: ccId,
+        stage,
+        fileName: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: buffer.byteLength,
+        data: buffer,
+        uploadedById,
+      },
+    });
+  }
+  return true;
+}
+
 // ---------- 신청서 (Application) ----------
 
 export async function submitApplication(formData: FormData) {
@@ -41,7 +62,8 @@ export async function submitApplication(formData: FormData) {
   const currentState = String(formData.get("currentState") ?? "").trim();
   const changeAgenda = String(formData.get("changeAgenda") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
-  const hasAttachment = formData.get("hasAttachment") === "yes";
+  const uploadedFiles = await saveAttachments(formData, ccId, "APPLICATION", user.id);
+  const hasAttachment = formData.get("hasAttachment") === "yes" || uploadedFiles;
 
   await prisma.application.upsert({
     where: { changeControlId: ccId },
@@ -72,8 +94,8 @@ export async function submitApplication(formData: FormData) {
     data: { changeControlId: ccId, action: "APPLICATION_SUBMITTED", byUserId: user.id, note: "신청서가 (재)제출되었습니다." },
   });
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/application`);
 }
 
 export async function approveApplication(formData: FormData) {
@@ -94,8 +116,8 @@ export async function approveApplication(formData: FormData) {
     }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/application`);
 }
 
 export async function rejectApplication(formData: FormData) {
@@ -113,8 +135,8 @@ export async function rejectApplication(formData: FormData) {
     }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/application`);
 }
 
 // ---------- 평가서 (Evaluation) ----------
@@ -130,6 +152,8 @@ export async function submitEvaluation(formData: FormData) {
   // 이미 제출된(반려된) 평가서를 고치는 경우에만 접수자 본인/관리자로 제한합니다. 최초 작성은 누구나 가능합니다.
   if (existing) assertOwnerOrAdmin(user, cc);
 
+  const uploadedFiles = await saveAttachments(formData, ccId, "EVALUATION", user.id);
+
   const data = {
     dept1Name: String(formData.get("dept1Name") ?? "").trim() || null,
     dept1Opinion: String(formData.get("dept1Opinion") ?? "").trim() || null,
@@ -140,7 +164,7 @@ export async function submitEvaluation(formData: FormData) {
     finalEvaluation: String(formData.get("finalEvaluation") ?? "").trim(),
     needsConsultation: formData.get("needsConsultation") === "yes",
     needsCooperation: formData.get("needsCooperation") === "yes",
-    hasAttachment: formData.get("hasAttachment") === "yes",
+    hasAttachment: formData.get("hasAttachment") === "yes" || uploadedFiles,
   };
 
   await prisma.evaluation.upsert({
@@ -161,8 +185,8 @@ export async function submitEvaluation(formData: FormData) {
     data: { changeControlId: ccId, action: "EVALUATION_SUBMITTED", byUserId: user.id },
   });
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/evaluation`);
 }
 
 export async function approveEvaluation(formData: FormData) {
@@ -178,8 +202,8 @@ export async function approveEvaluation(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "EVALUATION_APPROVED", byUserId: user.id } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/evaluation`);
 }
 
 export async function rejectEvaluation(formData: FormData) {
@@ -195,8 +219,8 @@ export async function rejectEvaluation(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "EVALUATION_REJECTED", byUserId: user.id, note: rejectReason } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/evaluation`);
 }
 
 // ---------- 계획서 (Plan) ----------
@@ -211,9 +235,10 @@ export async function submitPlan(formData: FormData) {
   const existing = await prisma.plan.findUnique({ where: { changeControlId: ccId } });
   if (existing) assertOwnerOrAdmin(user, cc);
 
+  const uploadedFiles = await saveAttachments(formData, ccId, "PLAN", user.id);
   const plannedCompletionDate = new Date(String(formData.get("plannedCompletionDate")));
   const planDetails = String(formData.get("planDetails") ?? "").trim();
-  const hasAttachment = formData.get("hasAttachment") === "yes";
+  const hasAttachment = formData.get("hasAttachment") === "yes" || uploadedFiles;
 
   await prisma.plan.upsert({
     where: { changeControlId: ccId },
@@ -233,8 +258,8 @@ export async function submitPlan(formData: FormData) {
 
   await prisma.activityLog.create({ data: { changeControlId: ccId, action: "PLAN_SUBMITTED", byUserId: user.id } });
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/plan`);
 }
 
 export async function approvePlan(formData: FormData) {
@@ -247,8 +272,8 @@ export async function approvePlan(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "PLAN_APPROVED", byUserId: user.id } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/plan`);
 }
 
 export async function rejectPlan(formData: FormData) {
@@ -261,8 +286,8 @@ export async function rejectPlan(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "PLAN_REJECTED", byUserId: user.id, note: rejectReason } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/plan`);
 }
 
 // ---------- 완료보고서 (Report) ----------
@@ -277,12 +302,12 @@ export async function submitReport(formData: FormData) {
   const existing = await prisma.report.findUnique({ where: { changeControlId: ccId } });
   if (existing) assertOwnerOrAdmin(user, cc);
 
+  const uploadedFiles = await saveAttachments(formData, ccId, "REPORT", user.id);
   const progress = formData.get("progress") === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
   const completedDateRaw = String(formData.get("completedDate") ?? "");
   const resultDetails = String(formData.get("resultDetails") ?? "").trim();
   const relatedDocRevision = String(formData.get("relatedDocRevision") ?? "").trim();
   const conclusion = String(formData.get("conclusion") ?? "").trim();
-  const hasAttachment = formData.get("hasAttachment") === "yes";
 
   const data = {
     progress: progress as "IN_PROGRESS" | "COMPLETED",
@@ -290,7 +315,7 @@ export async function submitReport(formData: FormData) {
     resultDetails,
     relatedDocRevision,
     conclusion,
-    hasAttachment,
+    hasAttachment: formData.get("hasAttachment") === "yes" || uploadedFiles,
   };
 
   await prisma.report.upsert({
@@ -309,8 +334,8 @@ export async function submitReport(formData: FormData) {
 
   await prisma.activityLog.create({ data: { changeControlId: ccId, action: "REPORT_SUBMITTED", byUserId: user.id } });
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/report`);
 }
 
 export async function approveReport(formData: FormData) {
@@ -323,8 +348,8 @@ export async function approveReport(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "REPORT_APPROVED", byUserId: user.id, note: "변경관리가 최종 완료되었습니다." } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/report`);
 }
 
 export async function rejectReport(formData: FormData) {
@@ -337,8 +362,8 @@ export async function rejectReport(formData: FormData) {
     prisma.activityLog.create({ data: { changeControlId: ccId, action: "REPORT_REJECTED", byUserId: user.id, note: rejectReason } }),
   ]);
 
-  revalidatePath(`/cc/${ccId}`);
-  redirect(`/cc/${ccId}`);
+  revalidatePath(`/cc/${ccId}`, "layout");
+  redirect(`/cc/${ccId}/report`);
 }
 
 // ---------- 비고 (관리자 전용) ----------
@@ -355,5 +380,4 @@ export async function updateRemarks(formData: FormData) {
   });
 
   revalidatePath(`/change-control`);
-  revalidatePath(`/cc/${ccId}`);
 }
