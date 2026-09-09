@@ -1,16 +1,18 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeStatusLabel, deadlineBadge, STAGE_LABEL } from "@/lib/stageMeta";
 import { daysUntilKST } from "@/lib/kst";
-import AllChangesClient from "./AllChangesClient";
+import Ledger from "./Ledger";
 
 export const dynamic = "force-dynamic";
 
 const TABS = [
   { key: "overview", label: "한눈에 보기" },
   { key: "detail", label: "상세 현황" },
-  { key: "all", label: "전체 설계변경" },
+  { key: "all", label: "설계변경 관리대장" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -22,6 +24,8 @@ export default async function ChangeControlPage({
 }) {
   const { tab: tabParam } = await searchParams;
   const tab: TabKey = TABS.some((t) => t.key === tabParam) ? (tabParam as TabKey) : "overview";
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const changeControls = await prisma.changeControl.findMany({
     orderBy: { updatedAt: "desc" },
@@ -83,26 +87,25 @@ export default async function ChangeControlPage({
 
       {tab === "detail" && <DetailTab inProgress={inProgress} completed={completed} activeRecord={activeRecord} />}
 
-      {tab === "all" && <AllChangesClient rows={changeControls.map((cc) => toRow(cc, activeRecord(cc)))} />}
+      {tab === "all" && <Ledger rows={changeControls.map(toRow)} isAdmin={isAdmin} />}
     </main>
   );
 }
 
-function toRow(cc: CC, activeStageRecord: { status: "SUBMITTED" | "APPROVED" | "REJECTED" } | null | undefined) {
-  const status = computeStatusLabel(cc.currentStage, cc.overallStatus, activeStageRecord);
+function toRow(cc: CC) {
   return {
     id: cc.id,
     ccNumber: cc.ccNumber,
     title: cc.title,
-    productName: cc.productName,
-    year: (cc.deadline ?? cc.createdAt).getFullYear(),
-    stageLabel: STAGE_LABEL[cc.currentStage],
-    statusText: status.text,
-    statusColor: status.color,
+    productNames: cc.productNames,
+    year: cc.createdAt.getFullYear(),
+    submittedAt: (cc.application?.submittedAt ?? cc.createdAt).toISOString(),
+    evaluationDate: cc.evaluation?.submittedAt ? cc.evaluation.submittedAt.toISOString() : null,
+    planDate: cc.plan?.submittedAt ? cc.plan.submittedAt.toISOString() : null,
+    completedDate: cc.report?.completedDate ? cc.report.completedDate.toISOString() : null,
+    remarks: cc.remarks ?? "",
     submitter: cc.createdBy.name,
-    deadline: cc.deadline ? cc.deadline.toISOString() : null,
-    updatedAt: cc.updatedAt.toISOString(),
-    overallStatus: cc.overallStatus,
+    isCompleted: cc.overallStatus === "COMPLETED",
   };
 }
 
@@ -232,11 +235,11 @@ function DetailTab({
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3">번호</th>
-                  <th className="px-4 py-3">제목</th>
+                  <th className="px-4 py-3">문서 제목</th>
                   <th className="px-4 py-3">제품명</th>
                   <th className="px-4 py-3">현재 단계</th>
                   <th className="px-4 py-3">상태</th>
-                  <th className="px-4 py-3">마감 기한</th>
+                  <th className="px-4 py-3">요청 기한</th>
                   <th className="px-4 py-3">접수자</th>
                   <th className="px-4 py-3">최근 업데이트</th>
                 </tr>
@@ -247,13 +250,13 @@ function DetailTab({
                   const badge = deadlineBadge(daysUntilKST(cc.deadline));
                   return (
                     <tr key={cc.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="px-4 py-3 text-slate-500">{cc.ccNumber}</td>
                       <td className="px-4 py-3">
                         <Link href={`/cc/${cc.id}`} className="font-medium text-brand-600 hover:underline">
-                          {cc.ccNumber}
+                          {cc.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-3">{cc.title}</td>
-                      <td className="px-4 py-3">{cc.productName}</td>
+                      <td className="px-4 py-3">{cc.productNames.join(", ")}</td>
                       <td className="px-4 py-3">{STAGE_LABEL[cc.currentStage]}</td>
                       <td className="px-4 py-3">
                         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${status.color}`}>
@@ -284,7 +287,7 @@ function DetailTab({
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3">번호</th>
-                  <th className="px-4 py-3">제목</th>
+                  <th className="px-4 py-3">문서 제목</th>
                   <th className="px-4 py-3">제품명</th>
                   <th className="px-4 py-3">접수자</th>
                   <th className="px-4 py-3">완료일</th>
@@ -293,13 +296,13 @@ function DetailTab({
               <tbody>
                 {completed.map((cc) => (
                   <tr key={cc.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-500">{cc.ccNumber}</td>
                     <td className="px-4 py-3">
                       <Link href={`/cc/${cc.id}`} className="font-medium text-brand-600 hover:underline">
-                        {cc.ccNumber}
+                        {cc.title}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">{cc.title}</td>
-                    <td className="px-4 py-3">{cc.productName}</td>
+                    <td className="px-4 py-3">{cc.productNames.join(", ")}</td>
                     <td className="px-4 py-3">{cc.createdBy.name}</td>
                     <td className="px-4 py-3 text-slate-500">{cc.updatedAt.toLocaleDateString("ko-KR")}</td>
                   </tr>

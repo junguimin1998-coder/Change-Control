@@ -75,7 +75,11 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
 
   if (!cc) notFound();
 
+  const isOwner = session?.user?.id === cc.createdById;
+  const canEdit = isOwner || isAdmin;
+
   const currentIndex = STAGE_ORDER.indexOf(cc.currentStage as (typeof STAGE_ORDER)[number]);
+  const SECTION_ANCHOR = ["application", "evaluation", "plan", "report"] as const;
 
   const activeRecord =
     cc.currentStage === "APPLICATION"
@@ -104,7 +108,7 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
         </div>
         <p className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
           <span>
-            {cc.ccNumber} · {cc.productName} · 접수자 {cc.createdBy.name}
+            {cc.ccNumber} · {cc.productNames.join(", ")} · 접수자 {cc.createdBy.name}
           </span>
           {cc.overallStatus !== "COMPLETED" && (
             <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${deadlineBadge(daysUntilKST(cc.deadline)).color}`}>
@@ -119,22 +123,29 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
         {STAGE_ORDER.filter((s) => s !== "DONE").map((stage, i) => {
           const done = i < currentIndex || cc.overallStatus === "COMPLETED";
           const active = i === currentIndex && cc.overallStatus !== "COMPLETED";
+          const reachable = done || active;
+          const circle = (
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                done ? "bg-emerald-500 text-white" : active ? "bg-brand-500 text-white" : "bg-slate-200 text-slate-500"
+              }`}
+            >
+              {i + 1}
+            </div>
+          );
           return (
             <div key={stage} className="flex flex-1 items-center">
-              <div className="flex flex-col items-center gap-1">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-                    done
-                      ? "bg-emerald-500 text-white"
-                      : active
-                      ? "bg-brand-500 text-white"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  {i + 1}
+              {reachable ? (
+                <a href={`#${SECTION_ANCHOR[i]}`} className="flex flex-col items-center gap-1">
+                  {circle}
+                  <span className="text-xs text-brand-600 hover:underline">{STAGE_LABEL[stage]}</span>
+                </a>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  {circle}
+                  <span className="text-xs text-slate-600">{STAGE_LABEL[stage]}</span>
                 </div>
-                <span className="text-xs text-slate-600">{STAGE_LABEL[stage]}</span>
-              </div>
+              )}
               {i < 3 && <div className={`mx-2 h-0.5 flex-1 ${done ? "bg-emerald-400" : "bg-slate-200"}`} />}
             </div>
           );
@@ -142,7 +153,7 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
       </div>
 
       {/* 신청서 */}
-      <section className="card mb-6">
+      <section id="application" className="card mb-6 scroll-mt-6">
         <h2 className="mb-3 text-lg font-semibold text-slate-800">1. 변경관리 신청서</h2>
         {cc.application ? (
           <div className="space-y-3 text-sm">
@@ -160,13 +171,17 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
           <ReviewBox ccId={cc.id} approveAction={approveApplication} rejectAction={rejectApplication} />
         )}
 
-        {cc.currentStage === "APPLICATION" && cc.application?.status === "REJECTED" && (
+        {cc.currentStage === "APPLICATION" && cc.application?.status === "REJECTED" && canEdit && (
           <ApplicationForm ccId={cc.id} defaultValues={cc.application} />
+        )}
+        {cc.currentStage === "APPLICATION" && cc.application?.status === "REJECTED" && !canEdit && (
+          <p className="mt-3 text-sm text-slate-500">반려되었습니다. 접수자 본인만 수정하여 다시 제출할 수 있습니다.</p>
         )}
       </section>
 
       {/* 평가서 */}
       <StageSection
+        id="evaluation"
         title="2. 변경관리 평가서"
         show={currentIndex >= 1 || !!cc.evaluation}
         locked={currentIndex < 1 && !cc.evaluation}
@@ -189,13 +204,16 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
         {cc.currentStage === "EVALUATION" && cc.evaluation?.status === "SUBMITTED" && isAdmin && (
           <ReviewBox ccId={cc.id} approveAction={approveEvaluation} rejectAction={rejectEvaluation} />
         )}
-        {cc.currentStage === "EVALUATION" && cc.evaluation?.status === "REJECTED" && (
+        {cc.currentStage === "EVALUATION" && cc.evaluation?.status === "REJECTED" && canEdit && (
           <EvaluationForm ccId={cc.id} defaultValues={cc.evaluation} />
+        )}
+        {cc.currentStage === "EVALUATION" && cc.evaluation?.status === "REJECTED" && !canEdit && (
+          <p className="mt-3 text-sm text-slate-500">반려되었습니다. 접수자 본인만 수정하여 다시 제출할 수 있습니다.</p>
         )}
       </StageSection>
 
       {/* 계획서 */}
-      <StageSection title="3. 변경관리 계획서" show={currentIndex >= 2 || !!cc.plan} locked={currentIndex < 2 && !cc.plan}>
+      <StageSection id="plan" title="3. 변경관리 계획서" show={currentIndex >= 2 || !!cc.plan} locked={currentIndex < 2 && !cc.plan}>
         {cc.plan ? (
           <div className="space-y-3 text-sm">
             <Field label="변경관리완료 예정일" value={new Date(cc.plan.plannedCompletionDate).toLocaleDateString("ko-KR")} />
@@ -210,11 +228,14 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
         {cc.currentStage === "PLAN" && cc.plan?.status === "SUBMITTED" && isAdmin && (
           <ReviewBox ccId={cc.id} approveAction={approvePlan} rejectAction={rejectPlan} />
         )}
-        {cc.currentStage === "PLAN" && cc.plan?.status === "REJECTED" && <PlanForm ccId={cc.id} defaultValues={cc.plan} />}
+        {cc.currentStage === "PLAN" && cc.plan?.status === "REJECTED" && canEdit && <PlanForm ccId={cc.id} defaultValues={cc.plan} />}
+        {cc.currentStage === "PLAN" && cc.plan?.status === "REJECTED" && !canEdit && (
+          <p className="mt-3 text-sm text-slate-500">반려되었습니다. 접수자 본인만 수정하여 다시 제출할 수 있습니다.</p>
+        )}
       </StageSection>
 
       {/* 완료보고서 */}
-      <StageSection title="4. 변경관리 완료보고서" show={currentIndex >= 3 || !!cc.report} locked={currentIndex < 3 && !cc.report}>
+      <StageSection id="report" title="4. 변경관리 완료보고서" show={currentIndex >= 3 || !!cc.report} locked={currentIndex < 3 && !cc.report}>
         {cc.report ? (
           <div className="space-y-3 text-sm">
             <Field label="진행상황" value={cc.report.progress === "COMPLETED" ? `완료 (${cc.report.completedDate ? new Date(cc.report.completedDate).toLocaleDateString("ko-KR") : "-"})` : "진행 중"} />
@@ -231,7 +252,10 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
         {cc.currentStage === "REPORT" && cc.report?.status === "SUBMITTED" && isAdmin && (
           <ReviewBox ccId={cc.id} approveAction={approveReport} rejectAction={rejectReport} />
         )}
-        {cc.currentStage === "REPORT" && cc.report?.status === "REJECTED" && <ReportForm ccId={cc.id} defaultValues={cc.report} />}
+        {cc.currentStage === "REPORT" && cc.report?.status === "REJECTED" && canEdit && <ReportForm ccId={cc.id} defaultValues={cc.report} />}
+        {cc.currentStage === "REPORT" && cc.report?.status === "REJECTED" && !canEdit && (
+          <p className="mt-3 text-sm text-slate-500">반려되었습니다. 접수자 본인만 수정하여 다시 제출할 수 있습니다.</p>
+        )}
       </StageSection>
 
       {/* 활동 이력 */}
@@ -265,6 +289,7 @@ function actionLabel(action: string) {
     REPORT_SUBMITTED: "완료보고서 제출",
     REPORT_APPROVED: "완료보고서 승인 (최종 완료)",
     REPORT_REJECTED: "완료보고서 반려",
+    REMARKS_UPDATED: "비고 수정",
   };
   return map[action] ?? action;
 }
@@ -308,10 +333,22 @@ function MetaRow({
   );
 }
 
-function StageSection({ title, show, locked, children }: { title: string; show: boolean; locked: boolean; children: React.ReactNode }) {
+function StageSection({
+  id,
+  title,
+  show,
+  locked,
+  children,
+}: {
+  id: string;
+  title: string;
+  show: boolean;
+  locked: boolean;
+  children: React.ReactNode;
+}) {
   if (!show && !locked) return null;
   return (
-    <section className="card mb-6">
+    <section id={id} className="card mb-6 scroll-mt-6">
       <h2 className="mb-3 text-lg font-semibold text-slate-800">{title}</h2>
       {locked ? <p className="text-sm text-slate-400">이전 단계가 승인되면 작성할 수 있습니다.</p> : children}
     </section>

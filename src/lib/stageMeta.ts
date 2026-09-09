@@ -1,27 +1,27 @@
 export function deadlineBadge(daysLeft: number | null) {
   if (daysLeft === null) {
-    return { text: "마감 미설정", color: "bg-slate-100 text-slate-500 border-slate-300" };
+    return { text: "요청기한 미설정", color: "bg-slate-100 text-slate-500 border-slate-300" };
   }
   if (daysLeft < 0) {
-    return { text: `마감 ${Math.abs(daysLeft)}일 초과`, color: "bg-rose-100 text-rose-700 border-rose-300" };
+    return { text: `요청기한 ${Math.abs(daysLeft)}일 초과`, color: "bg-rose-100 text-rose-700 border-rose-300" };
   }
   if (daysLeft === 0) {
-    return { text: "오늘 마감", color: "bg-rose-100 text-rose-700 border-rose-300" };
+    return { text: "요청기한 당일", color: "bg-rose-100 text-rose-700 border-rose-300" };
   }
   if (daysLeft <= 3) {
-    return { text: `마감 D-${daysLeft}`, color: "bg-rose-100 text-rose-700 border-rose-300" };
+    return { text: `요청기한 D-${daysLeft}`, color: "bg-rose-100 text-rose-700 border-rose-300" };
   }
   if (daysLeft <= 7) {
-    return { text: `마감 D-${daysLeft}`, color: "bg-amber-100 text-amber-700 border-amber-300" };
+    return { text: `요청기한 D-${daysLeft}`, color: "bg-amber-100 text-amber-700 border-amber-300" };
   }
-  return { text: `마감 D-${daysLeft}`, color: "bg-slate-100 text-slate-600 border-slate-300" };
+  return { text: `요청기한 D-${daysLeft}`, color: "bg-slate-100 text-slate-600 border-slate-300" };
 }
 
 export const STAGE_LABEL: Record<string, string> = {
-  APPLICATION: "신청서",
-  EVALUATION: "평가서",
-  PLAN: "계획서",
-  REPORT: "완료보고서",
+  APPLICATION: "접수",
+  EVALUATION: "평가",
+  PLAN: "계획",
+  REPORT: "승인",
   DONE: "완료",
 };
 

@@ -79,8 +79,9 @@ model ChangeControl {
   id            String        @id @default(cuid())
   ccNumber      String        @unique
   title         String
-  productName   String
+  productNames  String[]
   deadline      DateTime?
+  remarks       String?       @db.Text
   currentStage  Stage         @default(APPLICATION)
   overallStatus OverallStatus @default(IN_PROGRESS)
 

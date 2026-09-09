@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRODUCT_OPTIONS } from "@/lib/products";
 import { createApplication } from "./actions";
 
 export default async function NewChangeControlPage({
@@ -26,12 +27,19 @@ export default async function NewChangeControlPage({
         </div>
 
         <div>
-          <label className="label">제품명 · Product name</label>
-          <input name="productName" required className="input" />
+          <span className="label">제품명 · Product name (복수 선택 가능)</span>
+          <div className="grid grid-cols-1 gap-2 rounded-lg border border-slate-300 p-3 sm:grid-cols-2">
+            {PRODUCT_OPTIONS.map((p) => (
+              <label key={p} className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="productNames" value={p} className="h-4 w-4" />
+                {p}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div>
-          <label className="label">마감 기한 · Deadline</label>
+          <label className="label">요청 기한 · Requested due date</label>
           <input type="date" name="deadline" required className="input" />
         </div>
 

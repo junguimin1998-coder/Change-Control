@@ -13,16 +13,16 @@ export async function createApplication(formData: FormData) {
   }
 
   const title = String(formData.get("title") ?? "").trim();
-  const productName = String(formData.get("productName") ?? "").trim();
+  const productNames = formData.getAll("productNames").map((v) => String(v));
   const deadlineRaw = String(formData.get("deadline") ?? "");
   const currentState = String(formData.get("currentState") ?? "").trim();
   const changeAgenda = String(formData.get("changeAgenda") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
   const hasAttachment = formData.get("hasAttachment") === "yes";
 
-  if (!title || !productName || !deadlineRaw || !currentState || !changeAgenda || !reason) {
+  if (!title || productNames.length === 0 || !deadlineRaw || !currentState || !changeAgenda || !reason) {
     redirect(
-      "/cc/new?error=" + encodeURIComponent("모든 필수 항목을 입력해주세요.")
+      "/cc/new?error=" + encodeURIComponent("모든 필수 항목을 입력해주세요 (제품명, 요청 기한 포함).")
     );
   }
 
@@ -32,7 +32,7 @@ export async function createApplication(formData: FormData) {
     data: {
       ccNumber,
       title,
-      productName,
+      productNames,
       deadline: new Date(deadlineRaw),
       currentStage: "APPLICATION",
       overallStatus: "IN_PROGRESS",
