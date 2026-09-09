@@ -31,6 +31,11 @@ export default async function NewChangeControlPage({
         </div>
 
         <div>
+          <label className="label">마감 기한 · Deadline</label>
+          <input type="date" name="deadline" required className="input" />
+        </div>
+
+        <div>
           <label className="label">현행 · Current</label>
           <textarea name="currentState" required rows={3} className="input" placeholder="현재 상태/사양을 작성하세요." />
         </div>

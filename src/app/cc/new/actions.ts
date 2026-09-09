@@ -14,12 +14,13 @@ export async function createApplication(formData: FormData) {
 
   const title = String(formData.get("title") ?? "").trim();
   const productName = String(formData.get("productName") ?? "").trim();
+  const deadlineRaw = String(formData.get("deadline") ?? "");
   const currentState = String(formData.get("currentState") ?? "").trim();
   const changeAgenda = String(formData.get("changeAgenda") ?? "").trim();
   const reason = String(formData.get("reason") ?? "").trim();
   const hasAttachment = formData.get("hasAttachment") === "yes";
 
-  if (!title || !productName || !currentState || !changeAgenda || !reason) {
+  if (!title || !productName || !deadlineRaw || !currentState || !changeAgenda || !reason) {
     redirect(
       "/cc/new?error=" + encodeURIComponent("모든 필수 항목을 입력해주세요.")
     );
@@ -32,6 +33,7 @@ export async function createApplication(formData: FormData) {
       ccNumber,
       title,
       productName,
+      deadline: new Date(deadlineRaw),
       currentStage: "APPLICATION",
       overallStatus: "IN_PROGRESS",
       createdById: session!.user.id,

@@ -1,3 +1,19 @@
+export function deadlineBadge(daysLeft: number) {
+  if (daysLeft < 0) {
+    return { text: `마감 ${Math.abs(daysLeft)}일 초과`, color: "bg-rose-100 text-rose-700 border-rose-300" };
+  }
+  if (daysLeft === 0) {
+    return { text: "오늘 마감", color: "bg-rose-100 text-rose-700 border-rose-300" };
+  }
+  if (daysLeft <= 3) {
+    return { text: `마감 D-${daysLeft}`, color: "bg-rose-100 text-rose-700 border-rose-300" };
+  }
+  if (daysLeft <= 7) {
+    return { text: `마감 D-${daysLeft}`, color: "bg-amber-100 text-amber-700 border-amber-300" };
+  }
+  return { text: `마감 D-${daysLeft}`, color: "bg-slate-100 text-slate-600 border-slate-300" };
+}
+
 export const STAGE_LABEL: Record<string, string> = {
   APPLICATION: "신청서",
   EVALUATION: "평가서",

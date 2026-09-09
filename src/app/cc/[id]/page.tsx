@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { STAGE_LABEL, STAGE_ORDER, computeStatusLabel } from "@/lib/stageMeta";
+import { STAGE_LABEL, STAGE_ORDER, computeStatusLabel, deadlineBadge } from "@/lib/stageMeta";
+import { daysUntilKST } from "@/lib/kst";
 import {
   submitApplication,
   approveApplication,
@@ -101,8 +102,15 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
             {overallLabel.text}
           </span>
         </div>
-        <p className="text-sm text-slate-500">
-          {cc.ccNumber} · {cc.productName} · 접수자 {cc.createdBy.name}
+        <p className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+          <span>
+            {cc.ccNumber} · {cc.productName} · 접수자 {cc.createdBy.name}
+          </span>
+          {cc.overallStatus !== "COMPLETED" && (
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${deadlineBadge(daysUntilKST(cc.deadline)).color}`}>
+              {deadlineBadge(daysUntilKST(cc.deadline)).text}
+            </span>
+          )}
         </p>
       </div>
 
