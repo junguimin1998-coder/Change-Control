@@ -93,7 +93,7 @@ export default async function ChangeControlDetailPage({ params }: { params: Prom
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-slate-500 hover:underline">
+        <Link href="/change-control" className="text-sm text-slate-500 hover:underline">
           ← 목록으로
         </Link>
         <div className="mt-1 flex items-center justify-between">

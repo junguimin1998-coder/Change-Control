@@ -10,7 +10,7 @@ export default async function NewChangeControlPage({
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-slate-500 hover:underline">
+        <Link href="/change-control" className="text-sm text-slate-500 hover:underline">
           ← 목록으로
         </Link>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">변경관리 신청서</h1>
@@ -67,7 +67,7 @@ export default async function NewChangeControlPage({
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-3 pt-2">
-          <Link href="/" className="btn-secondary">
+          <Link href="/change-control" className="btn-secondary">
             취소
           </Link>
           <button type="submit" className="btn-primary">

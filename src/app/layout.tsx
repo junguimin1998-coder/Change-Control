@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Providers from "@/components/Providers";
-import TopNav from "@/components/TopNav";
+import AppShell from "@/components/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "변경관리 시스템",
+  title: "AJU PDV",
   description: "변경관리 신청/평가/계획/완료보고 워크플로우",
 };
 
@@ -13,8 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body>
         <Providers>
-          <TopNav />
-          {children}
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>
